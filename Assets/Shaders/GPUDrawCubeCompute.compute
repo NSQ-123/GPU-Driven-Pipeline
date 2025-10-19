@@ -1,0 +1,15 @@
+#pragma kernel CSMain
+
+RWStructuredBuffer<uint> ArgsBuffer;
+int InstanceCount;
+
+[numthreads(64, 1, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x < InstanceCount)
+    {
+        // ArgsBuffer 的初始化和更新在 C# 代码中完成
+        // 这里可以添加其他 GPU 计算逻辑
+        // 例如，可以根据需要处理其他渲染参数或数据
+    }
+}

@@ -1,0 +1,41 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// 定义顶点位置和索引
+RWStructuredBuffer<float3> Positions;
+RWStructuredBuffer<int> Indices;
+
+
+[numthreads(8,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    //CUBE的顶点位置
+    float3 cubePositions[] = {
+        float3(-0.5f, -0.5f, -0.5f),
+        float3(0.5f, -0.5f, -0.5f),
+        float3(0.5f, 0.5f, -0.5f),
+        float3(-0.5f, 0.5f, -0.5f),
+        float3(-0.5f, -0.5f, 0.5f),
+        float3(0.5f, -0.5f, 0.5f),
+        float3(0.5f, 0.5f, 0.5f),
+        float3(-0.5f, 0.5f, 0.5f),
+    };
+    //CUBE的三角面
+    int cubeIndices[] = {
+        0, 2, 1, 0, 3, 2, // 前面
+        1, 2, 6, 6, 5, 1, // 右面
+        4, 5, 6, 6, 7, 4, // 后面
+        0, 7, 3, 0, 4, 7, // 左面
+        0, 1, 5, 5, 4, 0, // 底面
+        2, 3, 7, 7, 6, 2  // 顶面
+    };
+
+    if(id.x < 8)
+    {
+        Positions[id.x] = cubePositions[id.x];
+    }
+    if(id.x < 36)
+    {
+        Indices[id.x] = cubeIndices[id.x];
+    }
+}
