@@ -30,13 +30,13 @@ namespace Game.Editor
                 string relativePath = Path.GetDirectoryName(processedPath).Replace("Assets/Scripts/", "");
                 string[] pathParts = relativePath.Split(Path.DirectorySeparatorChar);
                 var newNamespace = Namespace;
-                if(pathParts.Length >=2)
+                if(pathParts.Length >2)
                 {
-                    newNamespace = $"{Namespace}.{pathParts[2]}";
-                }
-                else if(pathParts.Length == 1)
-                {
-                    newNamespace = $"{Namespace}.{pathParts[1]}";
+                    for (int i = 2; i < pathParts.Length; i++)
+                    {
+                        var part = pathParts[i];
+                        newNamespace+= $".{part}";
+                    }
                 }
                 allText = allText.Replace("#Namespace#", newNamespace);
                 File.WriteAllText(processedPath, allText);
