@@ -5,10 +5,11 @@ Shader "Custom/MultiMeshInstancing"
     {
         _MainTex ("Texture", 2D) = "white" {}
         _BaseColor("Base Color", Color) = (1,1,1,1)
+        _StartInstanceIndex("Start Instance Index", Int) = 0
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" }
+        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" "DisableBatching"="True" }
         LOD 100
 
         Pass
@@ -20,8 +21,7 @@ Shader "Custom/MultiMeshInstancing"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
-            // 关键：启用 Procedural Instancing 以使用自定义的实例数据
-            #pragma instancing_options procedural:SetupInstanceData
+            #pragma instancing_options procedural:setup
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
@@ -31,13 +31,15 @@ Shader "Custom/MultiMeshInstancing"
                 uint modelID;
             };
 
-           
+            #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+            StructuredBuffer<InstanceData> _InstanceDataBuffer;
+            int _StartInstanceIndex;
+            #endif
 
             struct Attributes
             {
                 float4 positionOS : POSITION;
                 float2 uv : TEXCOORD0;
-                //uint instanceID : SV_InstanceID; // 关键：获取实例ID
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -48,49 +50,45 @@ Shader "Custom/MultiMeshInstancing"
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
-            sampler2D _MainTex;
+            TEXTURE2D(_MainTex);
+            SAMPLER(sampler_MainTex);
             float4 _MainTex_ST;
             float4 _BaseColor;
 
-            // 定义过程化实例化设置函数
-            #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
-             // 包含实例数据的主缓冲区
-            StructuredBuffer<InstanceData> _InstanceDataBuffer;
-            
-            // 此函数由 `#pragma instancing_options procedural:SetupInstanceData` 调用
-            void SetupInstanceData()
+            void setup()
             {
-                // 设置Unity的内置变换矩阵
-                // 使用 unity_InstanceID 从缓冲区中查找当前实例的变换矩阵
-                unity_ObjectToWorld = _InstanceDataBuffer[unity_InstanceID].objectToWorld;
-                unity_WorldToObject = unity_ObjectToWorld;
-                // 逆转置并调整符号以计算正确的世界到物体矩阵（简化处理）
-                unity_WorldToObject._14_24_34 *= -1;
-                unity_WorldToObject._11_22_33 = 1.0 / unity_WorldToObject._11_22_33;
+                // 必须存在，即使为空
             }
-            #endif
 
-            
-            Varyings vert (Attributes IN)
+            Varyings vert(Attributes IN)
             {
                 Varyings OUT;
                 
-                // 设置实例化数据
                 UNITY_SETUP_INSTANCE_ID(IN);
                 UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
-                // 由于使用了 procedural instancing, SetupInstanceData() 会自动被调用，
-                // 从而设置了 unity_ObjectToWorld 和 unity_WorldToObject 矩阵。
 
-                float3 positionWS = mul(unity_ObjectToWorld, float4(IN.positionOS.xyz, 1.0)).xyz;
-                OUT.positionCS = mul(UNITY_MATRIX_VP, float4(positionWS, 1.0));
+                #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+                // 计算正确的缓冲区索引
+                uint bufferIndex = _StartInstanceIndex + unity_InstanceID;
+                InstanceData data = _InstanceDataBuffer[bufferIndex];
+                
+                // 使用实例的变换矩阵
+                float4 positionWS = mul(data.objectToWorld, IN.positionOS);
+                OUT.positionCS = mul(UNITY_MATRIX_VP, positionWS);
+                #else
+                // 回退方案
+                float3 positionWS = TransformObjectToWorld(IN.positionOS.xyz);
+                OUT.positionCS = TransformWorldToHClip(positionWS.xyz);
+                #endif
+                
                 OUT.uv = TRANSFORM_TEX(IN.uv, _MainTex);
                 return OUT;
             }
 
-            half4 frag (Varyings IN) : SV_Target
+            half4 frag(Varyings IN) : SV_Target
             {
-                 UNITY_SETUP_INSTANCE_ID(IN);
-                half4 col = tex2D(_MainTex, IN.uv) * _BaseColor;
+                UNITY_SETUP_INSTANCE_ID(IN);
+                half4 col = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, IN.uv) * _BaseColor;
                 return col;
             }
             ENDHLSL
