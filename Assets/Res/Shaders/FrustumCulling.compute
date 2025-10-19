@@ -1,0 +1,55 @@
+// Each #kernel tells which function to compile; you can have many kernels
+// FrustumCulling.compute
+#pragma kernel CSMain
+
+struct InstanceData
+{
+    float4x4 objectToWorld;
+    uint modelID;
+};
+
+// 输入缓冲区：所有实例的初始数据
+StructuredBuffer<InstanceData> _InstanceDataBuffer;
+// 输出缓冲区：可见的实例数据（Append Buffer）
+AppendStructuredBuffer<InstanceData> _VisibleInstanceBuffer;
+
+// 剔除参数
+float4 _FrustumPlanes[6];
+float4x4 _CameraViewProjectionMatrix;
+int _TotalInstances;
+
+// 判断点是否在视锥体内（简化版，使用包围球判断）
+bool IsInFrustum(float3 worldPos, float radius)
+{
+    for (int i = 0; i < 6; i++)
+    {
+        float4 plane = _FrustumPlanes[i];
+        // 计算点到平面的距离
+        float distance = dot(float4(worldPos, 1.0), plane);
+        if (distance < -radius)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+[numthreads(64, 1, 1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)_TotalInstances)
+        return;
+
+    InstanceData instance = _InstanceDataBuffer[id.x];
+    
+    // 获取世界空间位置（假设包围球中心在原点，半径为1.5单位，可根据模型实际大小调整）
+    float3 worldPos = mul(instance.objectToWorld, float4(0, 0, 0, 1)).xyz;
+    float radius = 1.5; // 一个粗略的包围球半径
+
+    // 视锥体剔除
+    if (IsInFrustum(worldPos, radius))
+    {
+        // 如果可见，将此实例数据追加到可见缓冲区
+        _VisibleInstanceBuffer.Append(instance);
+    }
+}
