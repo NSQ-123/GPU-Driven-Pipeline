@@ -55,6 +55,31 @@ namespace Game.Test
             //mesh.RecalculateBounds();
             //mesh.RecalculateTangents();
         }
+
+        public static Matrix4x4[] GetRandomMatrix4x4(uint count)
+        {
+            var matrices = new Matrix4x4[count];
+            for (var i = 0; i < matrices.Length; i++)
+            {
+                matrices[i] = Matrix4x4.TRS
+                (
+                    Random.insideUnitSphere * 10f,
+                    Quaternion.Euler(Random.value * 360f, Random.value * 360f, Random.value * 360f), 
+                    Vector3.one
+                );
+            }
+            return matrices;
+        }
+        
+        public static Vector4[] GetRandomVector4(uint count)
+        {
+            var colors = new Vector4[count];
+            for (var i = 0; i < colors.Length; i++)
+            {
+                colors[i] = new Vector4(Random.value, Random.value, Random.value, 1f);
+            }
+            return colors;
+        }
         
     }
 }
