@@ -1,4 +1,4 @@
-﻿Shader "Instanced/InstancedShader" {
+﻿Shader "Example/DrawMeshIndirect" {
    Properties {
        _MainTex ("Albedo (RGB)", 2D) = "white" {}
        _BaseColor("Base Color", Color) = (1, 1, 1, 1)

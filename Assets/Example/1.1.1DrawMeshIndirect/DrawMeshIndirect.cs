@@ -3,7 +3,7 @@ using System.Collections;
 
 namespace Game
 {
-    public class ExampleClass : MonoBehaviour
+    public class DrawMeshIndirect : MonoBehaviour
     {
         public int instanceCount = 100000;
         public Mesh instanceMesh;
